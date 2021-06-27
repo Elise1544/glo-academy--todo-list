@@ -44,6 +44,7 @@ class Todo {
     li.insertAdjacentHTML(`beforeend`, `
     <span class='text-todo'>${todo.value}</span>
     <div class='todo-buttons'>
+      <button class='todo-edit'></button>
       <button class='todo-remove'></button>
       <button class='todo-complete'></button>
     </div>
@@ -61,30 +62,70 @@ class Todo {
   }
 
   deleteItem(item) {
+    this.animate({
+      duration: 500,
+      timing(timeFraction) {
+        return timeFraction;
+      },
+      draw: function (progress) {
+        item.style.transform = `translate(-${progress * 100}%)`
+      }
+    });
     this.todoData.delete(item.key);
-    this.render();
+    setTimeout(() => {
+      this.render()
+    }, 500);
   }
 
   completedItem(item) {
     if (item.closest(`.todo-list`)) {
       this.todoCompleted.append(item);
+      this.animate({
+        duration: 500,
+        timing(timeFraction) {
+          return timeFraction;
+        },
+        draw: function (progress) {
+          item.style.top = item.clientHeight * progress + 'px'
+        }
+      });
     } else {
       this.todoList.append(item);
+      item.style.top = '0';
     }
   }
 
-  handler() {
+  animate({ timing, draw, duration }) {
+    let start = performance.now();
+    requestAnimationFrame(function animate(time) {
+      let timeFraction = (time - start) / duration;
+      if (timeFraction > 1) timeFraction = 1;
+      let progress = timing(timeFraction);
+      draw(progress);
+      if (timeFraction < 1) {
+        requestAnimationFrame(animate);
+      }
+    });
+  }
 
+  editItem(item) {
+    item.contentEditable = true;
+    item.addEventListener(`blur`, () => {
+      item.contentEditable = false;
+    });
+  }
+
+  handler() {
     this.todoContainer.addEventListener(`click`, (evt) => {
       const target = evt.target;
       if (target.classList.contains(`todo-remove`)) {
         this.deleteItem(target.closest(`.todo-item`));
       } else if (target.classList.contains(`todo-complete`)) {
         this.completedItem(target.closest(`.todo-item`));
+      } else if (target.classList.contains(`todo-edit`)) {
+        this.editItem(target.closest(`.todo-item`));
       }
     });
-
-
   }
 
   init() {
